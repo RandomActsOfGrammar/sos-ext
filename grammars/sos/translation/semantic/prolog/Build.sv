@@ -26,7 +26,7 @@ IOVal<Integer> ::= _ _ _ _ _
 
 
 function runProlog
-IOVal<Integer> ::= m::ModuleList genLoc::String grmmrsLoc::String
+IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::String
                    a::Decorated CmdArgs i::IOToken
 {
   local message::IOToken = printT("Producing Prolog output\n", i);
@@ -39,11 +39,13 @@ IOVal<Integer> ::= m::ModuleList genLoc::String grmmrsLoc::String
   local dir::String =
       genLoc ++ (if endsWith("/", genLoc) then "" else "/") ++
       "prolog/";
+
   local fileLoc::String = dir ++ a.generateModuleName ++ ".pl";
   local mkDirectory::IOVal<Integer> =
       systemT("mkdir -p " ++ dir, message);
   local output::IOToken =
       writeFileT(fileLoc, prologString, mkDirectory.io);
+
 
   --write Silver pieces for running
   local genDerive::IOVal<Integer> =
@@ -52,10 +54,15 @@ IOVal<Integer> ::= m::ModuleList genLoc::String grmmrsLoc::String
 
   return
       if mkDirectory.iovalue != 0
-      then mkDirectory
-      else genDerive;
+      then returnVals(
+            returnCode = mkDirectory.iovalue,
+            fileLocs = []
+            )
+      else returnVals(
+            returnCode = 0,
+            fileLocs = [fileLoc]
+            );
 }
-
 
 --Generate the pieces for running a language using this
 function genSilverFunctions
@@ -176,3 +183,5 @@ Either<String  Decorated CmdArgs> ::= args::[String]
                flagParser=flag(prologFlag))];
 }
 
+--Adding prolog definitions to the .jar
+--Ask what the exact file path should be, if it should be sterling.jar or stlc.host.jar, and 

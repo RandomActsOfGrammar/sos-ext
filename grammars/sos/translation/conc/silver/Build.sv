@@ -24,7 +24,7 @@ IOVal<Integer> ::= _ _ _ _ _
 
 
 function runSilverConc
-IOVal<Integer> ::= m::ModuleList genLoc::String grmmrsLoc::String
+IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::String
                    a::Decorated CmdArgs i::IOToken
 {
   local message::IOToken =

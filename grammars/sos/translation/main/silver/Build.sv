@@ -27,7 +27,7 @@ IOVal<Integer> ::= _ _ _ _ _
 
 
 function runSilverMain
-IOVal<Integer> ::= m::ModuleList genLoc::String grmmrsLoc::String
+IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::String
                    a::Decorated CmdArgs i::IOToken
 {
   local message::IOToken =
@@ -94,7 +94,7 @@ IOVal<Boolean> ::= mods::[(String, [SilverFunDef])] genLoc::String
 
 
 function genSilverMainFunction
-IOVal<Integer> ::= genLoc::String grmmrsLoc::String a::Decorated CmdArgs
+IOVal<Integer> ::= genLoc::String r::ReturnVals grmmrsLoc::String a::Decorated CmdArgs
                    module::String allGrmmrs::[String] ioin::IOToken
 {
   --Silver imports
@@ -140,20 +140,28 @@ IOVal<Integer> ::= genLoc::String grmmrsLoc::String a::Decorated CmdArgs
   local written::IOToken =
       writeFileT(filename, completeContents, mkDirectory.io);
 
+  local jarName::String =
+        if null(a.outputName)
+                --Java has a problem with JAR file names having colons
+               then "-o " ++ substitute(":", ".", module) ++ ".jar"
+               else "-o " ++ head(a.outputName);
+  
   --compile it, since this is the last piece of the main
   local compileCmd::String =
       "silver -I " ++ genLoc ++ " " ++
              "-I " ++ grmmrsLoc ++ " " ++
-             ( if null(a.outputName)
-                --Java has a problem with JAR file names having colons
-               then "-o " ++ substitute(":", ".", module) ++ ".jar"
-               else "-o " ++ head(a.outputName) ) ++ " " ++
+             jarName ++ " " ++
              "main:" ++ a.generateModuleName;
+
   local compile::IOVal<Integer> = systemT(compileCmd, written);
   local printCompileError::IOToken =
       printT("Error compiling runnable translation\n" ++
              "  (command: " ++ compileCmd ++ "; returned " ++
              toString(compile.iovalue) ++ ")\n", compile.io);
+
+    --Not sure if the semicolon is needed at the line, there is a bug on this line but it persists with or without the semicolon--
+  local addToJarFile::IOVal<Integer> =
+        systemT("jar -uf jarName " ++ implode(" ", r.fileLocs), compile.io);
 
   return
       if mkDirectory.iovalue != 0

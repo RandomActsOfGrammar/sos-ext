@@ -125,7 +125,7 @@ IOVal<Integer> ::=
   local pre::IOToken =
       printT("\n---------------------------------------\n\n", ioin);
   local runAct::IOVal<Integer> =
-      act.runFun(mods, genLoc, grmmrsLoc, a, pre);
+      act.runFun(mods, genLoc, grmmrsLoc, fileLocs, a, pre);
 
   return
       case actions of
@@ -149,15 +149,24 @@ function buildFinalGrammar
 }
 
 
+nonterminal ReturnVals with returnCode, filesLocs;
+annotation returnCode::Integer;
+annotation fileLocs::[String];
 
+production returnVals
+top::ReturnVals ::=
+{ }
 
-
+returnVals(
+  returnCode = 0,
+  fileLocs = []
+)
 
 nonterminal ActionSpec with runFun, shouldDoFun, actionDesc;
 --How to run the action (return 0 for success, non-zero for fail)
 --Any printed output should end with a single newline
 --   result ::= compiled mods  gen loc  grammars loc  args  io
-annotation runFun::(IOVal<Integer> ::= ModuleList  String  String
+annotation runFun::(IOVal<ReturnVals> ::= ModuleList ReturnVals String  String
                                        Decorated CmdArgs  IOToken);
 --Whether to run the action (true => run, false => skip)
 --Should not do any IO actions
@@ -170,8 +179,11 @@ production actionSpec
 top::ActionSpec ::=
 { }
 
-
-
+actionSpec(
+  runFun = runProlog,
+  shouldDoFun = _,
+  actionDesc = "make prolog"
+)
 
 
 attribute
