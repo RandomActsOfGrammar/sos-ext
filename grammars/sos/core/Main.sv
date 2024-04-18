@@ -52,14 +52,23 @@ IOVal<Integer> ::= args::[String]
      [
       actionSpec(
          runFun =
-            \ m::ModuleList gen::String grmmrs::String
+            \ m::ModuleList r::ReturnVals gen::String grmmrs::String
               a::Decorated CmdArgs i::IOToken ->
               let message::IOToken =
                   printT("Checking for errors\n", i)
               in
                 if m.errorString != ""
-                then ioval(printT(m.errorString ++ "\n", message), 1)
-                else ioval(printT("No errors found\n", message), 0)
+                then ioval(printT(m.errorString ++ "\n", message), 
+                     returnVals(
+                     returnCode = 1,
+                     fileLocs = []
+                     ))
+                
+                else ioval(printT("No errors found\n", message), 
+                     returnVals(
+                     returnCode = 0,
+                     fileLocs = []
+                     ))
               end,
          shouldDoFun = \ a::Decorated CmdArgs -> true,
          actionDesc = "Error Checking")
@@ -86,6 +95,7 @@ IOVal<Integer> ::= args::[String]
   local modules::IOVal<Either<String ModuleList>> =
         buildModuleList(a.generateModuleName, rootLocs,
            abstractFileParse, concreteFileParse, mainFileParse, ioin);
+  local rVals::ReturnVals = returnVals(returnCode = 0, fileLocs = []);
   local genLoc::IOVal<String> =
         envVarT("STERLING_GENERATED", modules.io);
   local grmmrsLoc::IOVal<String> =
@@ -95,15 +105,14 @@ IOVal<Integer> ::= args::[String]
         printT("\n*************** Sterling ***************\n\n" ++
                "   Module:  " ++ a.generateModuleName ++ "\n",
                grmmrsLoc.io);
-  local runs::IOVal<Integer> =
-        runActions(actions, modules.iovalue.fromRight, genLoc.iovalue,
+  local runs::IOVal<ReturnVals> =
+        runActions(actions, modules.iovalue.fromRight, rVals, genLoc.iovalue,
                    grmmrsLoc.iovalue, a, startMessage);
 
   return
      case e of
      | left(err) ->
-       ioval(printT("Error parsing commandline input:\n" ++ err,
-                    ioin), 1)
+       ioval(printT("Error parsing commandline input:\n" ++ err, ioin), 1)
      | right(_) ->
        case modules.iovalue of
        | left(err) ->
@@ -117,15 +126,15 @@ IOVal<Integer> ::= args::[String]
 
 --run all the actions in the order in which they occur
 function runActions
-IOVal<Integer> ::=
-    actions::[ActionSpec] mods::ModuleList genLoc::String
+IOVal<ReturnVals> ::=
+    actions::[ActionSpec] mods::ModuleList rVals::ReturnVals genLoc::String
     grmmrsLoc::String a::Decorated CmdArgs ioin::IOToken
 {
   local act::ActionSpec = head(actions);
   local pre::IOToken =
       printT("\n---------------------------------------\n\n", ioin);
-  local runAct::IOVal<Integer> =
-      act.runFun(mods, genLoc, grmmrsLoc, fileLocs, a, pre);
+  local runAct::IOVal<ReturnVals> =
+      act.runFun(mods, rVals, genLoc, grmmrsLoc, a, pre);
 
   return
       case actions of
@@ -133,8 +142,8 @@ IOVal<Integer> ::=
       | _::tl when act.shouldDoFun(a) ->
         if runAct.iovalue != 0 --error in this action
         then runAct
-        else runActions(tl, mods, genLoc, grmmrsLoc, a, runAct.io)
-      | _::tl -> runActions(tl, mods, genLoc, grmmrsLoc, a, ioin)
+        else runActions(tl, mods, rVals, genLoc, grmmrsLoc, a, runAct.io)
+      | _::tl -> runActions(tl, mods, rVals, genLoc, grmmrsLoc, a, ioin)
       end;
 }
 
@@ -148,19 +157,15 @@ function buildFinalGrammar
           "main:" ++ module);
 }
 
-
-nonterminal ReturnVals with returnCode, filesLocs;
+--Im going to just add a bunch of annotations to ReturnVals for every action func in Run--
+--BUT i feel like there is a way to make returnCode a variant type variable--
+nonterminal ReturnVals with returnCode, fileLocs;
 annotation returnCode::Integer;
 annotation fileLocs::[String];
 
 production returnVals
 top::ReturnVals ::=
 { }
-
-returnVals(
-  returnCode = 0,
-  fileLocs = []
-)
 
 nonterminal ActionSpec with runFun, shouldDoFun, actionDesc;
 --How to run the action (return 0 for success, non-zero for fail)
@@ -178,13 +183,6 @@ annotation actionDesc::String;
 production actionSpec
 top::ActionSpec ::=
 { }
-
-actionSpec(
-  runFun = runProlog,
-  shouldDoFun = _,
-  actionDesc = "make prolog"
-)
-
 
 attribute
    errors, generateModuleName, rootLocs, outputName, helpRequest,

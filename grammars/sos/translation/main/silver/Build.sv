@@ -49,8 +49,15 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
 
   return
       if !genGrammars.iovalue
-      then ioval(genGrammarsError, 2)
-      else genMain;
+      then returnVals(
+            returnCode = ioval(genGrammarsError, 2),
+            fileLocs = []
+            )
+      else returnVals(
+            returnCode = genMain,
+            fileLocs = []
+            );
+      
 }
 
 
