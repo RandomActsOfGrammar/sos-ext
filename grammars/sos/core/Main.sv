@@ -118,7 +118,7 @@ IOVal<Integer> ::= args::[String]
        | left(err) ->
          ioval(printT(err ++ "\n", modules.io), 1)
        | right(_) ->
-         ioval(printT("\n", runs.io), runs.iovalue)
+         ioval(printT("\n", runs.io), runs.iovalue.returnCode)
        end
      end;
 }
@@ -138,9 +138,9 @@ IOVal<ReturnVals> ::=
 
   return
       case actions of
-      | [] -> ioval(ioin, 0)
+      | [] -> ioval(ioin, returnVals(returnCode = 0, fileLocs = []))
       | _::tl when act.shouldDoFun(a) ->
-        if runAct.iovalue != 0 --error in this action
+        if runAct.iovalue.returnCode != 0 --error in this action
         then runAct
         else runActions(tl, mods, rVals, genLoc, grmmrsLoc, a, runAct.io)
       | _::tl -> runActions(tl, mods, rVals, genLoc, grmmrsLoc, a, ioin)
@@ -157,8 +157,6 @@ function buildFinalGrammar
           "main:" ++ module);
 }
 
---Im going to just add a bunch of annotations to ReturnVals for every action func in Run--
---BUT i feel like there is a way to make returnCode a variant type variable--
 nonterminal ReturnVals with returnCode, fileLocs;
 annotation returnCode::Integer;
 annotation fileLocs::[String];
