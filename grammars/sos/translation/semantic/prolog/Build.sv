@@ -52,16 +52,19 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
       genSilverFunctions(genLoc, a.generateModuleName, fileLoc,
                          output);
 
+
+  --I'm going to try mkDirectory.io since that was the last thing to have .io used on it but
+  --genDerive is the most recently created IOVal so it maaaaay be that
   return
       if mkDirectory.iovalue != 0
-      then returnVals(
+      then ioval(mkDirectory.io, returnVals(
             returnCode = mkDirectory.iovalue,
             fileLocs = []
-            )
-      else returnVals(
+            ))
+      else ioval(mkDirectory.io, returnVals(
             returnCode = 0,
             fileLocs = [fileLoc]
-            );
+            ));
 }
 
 --Generate the pieces for running a language using this

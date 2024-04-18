@@ -43,20 +43,20 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
       printT("Error producing Silver grammar files\n", genGrammars.io);
   --generate and compile pieces for running
   local genMain::IOVal<Integer> =
-      genSilverMainFunction(genLoc, grmmrsLoc, a,
+      genSilverMainFunction(genLoc, r, grmmrsLoc, a,
          a.generateModuleName, map(fst,  m.silverFunDefsModules),
          genGrammars.io);
 
   return
       if !genGrammars.iovalue
-      then returnVals(
-            returnCode = ioval(genGrammarsError, 2),
+      then ioval(genGrammarsError, returnVals(
+            returnCode = 2,
             fileLocs = []
-            )
-      else returnVals(
-            returnCode = genMain,
+            ))
+      else ioval(message, returnVals(
+            returnCode = genMain.iovalue,
             fileLocs = []
-            );
+            ));
       
 }
 

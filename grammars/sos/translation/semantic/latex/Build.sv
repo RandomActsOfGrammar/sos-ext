@@ -36,10 +36,10 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
   local fileLoc::String = head(a.latexLocation);
   local output::IOToken = writeFileT(fileLoc, latexString, message);
 
-  return returnVals(
-            returnCode = ioval(output, 0),
+  return ioval(output, returnVals(
+            returnCode = 0,
             fileLocs = []
-            );
+            ));
 }
 
 

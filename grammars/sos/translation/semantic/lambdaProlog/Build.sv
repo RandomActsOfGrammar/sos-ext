@@ -44,10 +44,10 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
       writeFileT(modFile, buildMod(moduleName, importedMods,
                                    m.lpRules), outputSig);
 
-  return returnVals(
-            returnCode = ioval(outputMod, 0),
+  return ioval(outputMod, returnVals(
+            returnCode = 0,
             fileLocs = []
-            );
+            ));
 }
 
 
