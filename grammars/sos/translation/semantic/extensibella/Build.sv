@@ -62,9 +62,9 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
                       outputInterfaceFile)
       else outputInterfaceFile;
 
-  return ioval(outputDefFile, returnVals(
+  return ioval(outputFullFile, returnVals(
             returnCode = 0,
-            fileLocs = []
+            fileLocs = r.fileLocs
             ));
 }
 

@@ -133,16 +133,17 @@ IOVal<ReturnVals> ::=
   local act::ActionSpec = head(actions);
   local pre::IOToken =
       printT("\n---------------------------------------\n\n", ioin);
+
   local runAct::IOVal<ReturnVals> =
       act.runFun(mods, rVals, genLoc, grmmrsLoc, a, pre);
-
+      
   return
       case actions of
       | [] -> ioval(ioin, returnVals(returnCode = 0, fileLocs = []))
       | _::tl when act.shouldDoFun(a) ->
         if runAct.iovalue.returnCode != 0 --error in this action
         then runAct
-        else runActions(tl, mods, rVals, genLoc, grmmrsLoc, a, runAct.io)
+        else runActions(tl, mods, runAct.iovalue, genLoc, grmmrsLoc, a, runAct.io)
       | _::tl -> runActions(tl, mods, rVals, genLoc, grmmrsLoc, a, ioin)
       end;
 }

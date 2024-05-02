@@ -46,7 +46,7 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
 
   return ioval(outputMod, returnVals(
             returnCode = 0,
-            fileLocs = []
+            fileLocs = r.fileLocs
             ));
 }
 

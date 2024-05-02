@@ -51,11 +51,11 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
       if !genGrammars.iovalue
       then ioval(genGrammarsError, returnVals(
             returnCode = 2,
-            fileLocs = []
+            fileLocs = r.fileLocs
             ))
-      else ioval(message, returnVals(
+      else ioval(genMain.io, returnVals(
             returnCode = genMain.iovalue,
-            fileLocs = []
+            fileLocs = r.fileLocs
             ));
       
 }
@@ -104,6 +104,12 @@ function genSilverMainFunction
 IOVal<Integer> ::= genLoc::String r::ReturnVals grmmrsLoc::String a::Decorated CmdArgs
                    module::String allGrmmrs::[String] ioin::IOToken
 {
+    local jarName::String =
+        if null(a.outputName)
+                --Java has a problem with JAR file names having colons
+               then substitute(":", ".", module) ++ ".jar"
+               else head(a.outputName);
+
   --Silver imports
   local importGrammars::[String] =
       map(\ s::String -> "import silverMain:" ++ s ++ ";",
@@ -114,7 +120,7 @@ IOVal<Integer> ::= genLoc::String r::ReturnVals grmmrsLoc::String a::Decorated C
     "function main\nIOVal<Integer> ::= " ++
     "args::[String] ioin::IOToken\n{\n" ++
     "   local startP::IOVal<ParserConfig> = init_parse(ioin);\n" ++
-    "   local startD::IOVal<DeriveConfig> = init_derive(ioin);\n" ++
+    "   local startD::IOVal<DeriveConfig> = init_derive(\"" ++ jarName ++ "\", startP.io);\n" ++
     "   local parserConfig__::ParserConfig = startP.iovalue;\n" ++
     "   local deriveConfig__::DeriveConfig = startD.iovalue;\n" ++
     "   local parseFun__::(IOVal<Either<String Term>> ::= " ++
@@ -146,18 +152,12 @@ IOVal<Integer> ::= genLoc::String r::ReturnVals grmmrsLoc::String a::Decorated C
       systemT("mkdir -p " ++ grammarInfo.1, ioin);
   local written::IOToken =
       writeFileT(filename, completeContents, mkDirectory.io);
-
-  local jarName::String =
-        if null(a.outputName)
-                --Java has a problem with JAR file names having colons
-               then "-o " ++ substitute(":", ".", module) ++ ".jar"
-               else "-o " ++ head(a.outputName);
   
   --compile it, since this is the last piece of the main
   local compileCmd::String =
       "silver -I " ++ genLoc ++ " " ++
              "-I " ++ grmmrsLoc ++ " " ++
-             jarName ++ " " ++
+             "-o " ++ jarName ++ " " ++
              "main:" ++ a.generateModuleName;
 
   local compile::IOVal<Integer> = systemT(compileCmd, written);
@@ -167,13 +167,14 @@ IOVal<Integer> ::= genLoc::String r::ReturnVals grmmrsLoc::String a::Decorated C
              toString(compile.iovalue) ++ ")\n", compile.io);
 
     --Not sure if the semicolon is needed at the line, there is a bug on this line but it persists with or without the semicolon--
-  local addToJarFile::IOVal<Integer> =
-        systemT("jar -uf jarName " ++ implode(" ", r.fileLocs), compile.io);
 
+  local addToJarFile::IOVal<Integer> =
+        systemT("jar -uf " ++ jarName ++ " " ++ implode(" ", r.fileLocs), compile.io);
+  
   return
       if mkDirectory.iovalue != 0
       then mkDirectory
       else if compile.iovalue != 0
       then ioval(printCompileError, 2)
-      else compile;
+      else addToJarFile;
 }

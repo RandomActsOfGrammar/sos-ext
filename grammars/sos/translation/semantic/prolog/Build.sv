@@ -40,30 +40,32 @@ IOVal<ReturnVals> ::= m::ModuleList r::ReturnVals genLoc::String grmmrsLoc::Stri
       genLoc ++ (if endsWith("/", genLoc) then "" else "/") ++
       "prolog/";
 
-  local fileLoc::String = dir ++ a.generateModuleName ++ ".pl";
+  local shortName::String = a.generateModuleName ++ ".pl";
+
+  local fileLoc::String = dir ++ shortName;
   local mkDirectory::IOVal<Integer> =
       systemT("mkdir -p " ++ dir, message);
   local output::IOToken =
       writeFileT(fileLoc, prologString, mkDirectory.io);
 
+    local linking::IOVal<Integer> =
+        systemT("ln -s " ++ fileLoc ++ " " ++ shortName, output);
+
 
   --write Silver pieces for running
   local genDerive::IOVal<Integer> =
-      genSilverFunctions(genLoc, a.generateModuleName, fileLoc,
-                         output);
+      genSilverFunctions(genLoc, a.generateModuleName, shortName,
+                         linking.io);
 
-
-  --I'm going to try mkDirectory.io since that was the last thing to have .io used on it but
-  --genDerive is the most recently created IOVal so it maaaaay be that
   return
       if mkDirectory.iovalue != 0
       then ioval(mkDirectory.io, returnVals(
             returnCode = mkDirectory.iovalue,
             fileLocs = []
             ))
-      else ioval(mkDirectory.io, returnVals(
-            returnCode = 0,
-            fileLocs = [fileLoc]
+      else ioval(genDerive.io, returnVals(
+            returnCode = genDerive.iovalue,
+            fileLocs = (a.generateModuleName ++ ".pl") :: r.fileLocs
             ));
 }
 
@@ -78,12 +80,15 @@ IOVal<Integer> ::= genLoc::String module::String prologFile::String
       "   sos:translation:semantic:prolog:parseProlog;\n" ++
       "}";
 
+
   --init function for Prolog interaction, starting Prolog process
   local initFunction::String =
-      "function init_derive\nIOVal<DeriveConfig> ::= " ++
-                       "ioin::IOToken\n{\n" ++
-      "   return spawnProcess(\"swipl\", [\"" ++ prologFile ++
-                                           "\"], ioin);\n}";
+      "function init_derive\n" ++
+            "IOVal<DeriveConfig> ::= jarName::String ioin::IOToken\n" ++
+       "{\n" ++
+       "   local extractACopyOfPLFile::IOVal<Integer> = systemT(\"jar xf \" ++ jarName ++ \" " ++ prologFile ++ "\", ioin);\n" ++
+       "   return spawnProcess(\"swipl\", [\"" ++ prologFile ++
+                                           "\"], extractACopyOfPLFile.io);\n}";
 
   --derive function
   local deriveFunction::String =
